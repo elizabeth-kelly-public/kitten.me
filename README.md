@@ -1,18 +1,20 @@
 # kitten.me
 
-A meadow with four cats in it. The page is a window onto a world that keeps
-running whether or not anyone is looking at it.
+A list of things currently holding my attention. The first is a meadow with
+four cats in it — a window onto a world that keeps running whether or not
+anyone is looking at it.
 
-Built from the design doc *Kitten.me landing page*, composition **1b** — the
-specimen plate: the world is an object sitting on paper, the paper is what
-changes colour, and the only large thing on the page is a number.
+Each project is a plate: supporting text on the left, its visual on the right.
+The plate comes from the design doc *Kitten.me landing page*, composition
+**1b** — the world is an object sitting on paper, the paper is what changes
+colour, and the only large thing in the block is a number.
 
 ## Files
 
 | | |
 |---|---|
-| `index.html` | the page — one window, one tick, one roster |
-| `styles.css` | composition 1b, collapsing to the 1e phone layout at 820px |
+| `index.html` | the page — a heading and a list of project blocks |
+| `styles.css` | the plate, collapsing to one column at 820px |
 | `site.js` | keeps the world ticking, draws it, drives the palette |
 | `meadow.js` | the world: live client, local fallback simulation, canvas rendering |
 | `og.html` | generator for the social card |
@@ -85,21 +87,45 @@ markings were arcs struck from a centre inside the body, so they bowed the
 wrong way and nested into each other — closer to a curl than a stripe. The
 direction of the stroke is the whole difference.
 
-**Roster lines must fit on one line.** The reading column is bottom-aligned
-against the window, so a wrapped row grows the block upward and jumps the tick
-number by a full line — very visible at 62px. The column is `16rem` (256px) and
-the widest line the world can produce is `Kittybear chases something small` at
+**Roster lines must fit on one line.** The column is `16rem` (256px) and the
+widest line the world can produce is `Kittybear chases something small` at
 230px, leaving 26px of headroom. `sleeps in the tall grass` was shortened to
 `sleeps in the grass` for the same reason: it was the only one of 188 possible
 name/phrase combinations that overflowed, and at night every cat says it. If
 you add a phrase or the server sends a longer name, check it against that
 budget — 35 characters at 12px IBM Plex Mono, whose advance is 0.6em.
 
+This mattered more when the reading column was bottom-aligned against the
+window, as 1b specifies: a wrapped row grew the block upward and jumped the
+62px tick by a full line. The list layout top-aligns the two columns instead,
+so a wrap now pushes downward and the tick holds still. Worth keeping the lines
+short regardless — the rows below a wrap still shift once a second.
+
 One scale note, since it is easy to be caught out by: `og.png` draws a cat at
 134px, because the card is 1200px wide showing 12 tiles. The live window is
 640px showing the same 12 tiles, so cats land near 68px, and about 48px when
 the camera caps on a scattered group. The markings are tuned to stay legible at
 that smaller size rather than to look their best in the card.
+
+## Adding a project
+
+Copy one `<li class="project">` block in `index.html` and change the title line
+and the body. Nothing else needs touching: the rule and the spacing between
+blocks come from a `.project + .project` selector, so they appear only once
+there are two, and a single project still sits on the page as if there were no
+list at all.
+
+The body is a two-column grid — `.reading` on the left, `.project-visual` on
+the right — that collapses to one column below 820px with the visual leading.
+The visual can be anything; only the cats carry a live canvas. If you drop in a
+plain `<img>`, keep the `.window` class for the frame and mat, or leave it off
+for something that should sit flat on the paper.
+
+Two things are wired specifically to the cats and would need generalising if a
+second project wanted them: `site.js` looks up `#meadow`, `#tick`, `#phase`,
+`#source` and `#roster` by id, and the palette that drives the whole page comes
+from the meadow's clock. A second project inherits those colours whether or not
+it has anything to do with cats.
 
 ## The social card
 

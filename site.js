@@ -63,6 +63,19 @@ function measure() {
 new ResizeObserver(measure).observe(el.canvas);
 measure();
 
+/* ── visibility ──────────────────────────────────────────────────── */
+
+// The page is a scrolling list now, so the window can sit well off-screen.
+// The world keeps ticking either way — only the drawing stops, so the count
+// and the roster stay honest while nobody is looking at the meadow.
+let onScreen = true;
+if (typeof IntersectionObserver === 'function') {
+  new IntersectionObserver(
+    ([e]) => { onScreen = e.isIntersecting; },
+    { rootMargin: '200px' },
+  ).observe(el.canvas);
+}
+
 /* ── pointing ────────────────────────────────────────────────────── */
 
 function pointAt(e) {
@@ -103,21 +116,23 @@ function draw(now) {
 
   const across = NARROW.matches ? ACROSS_NARROW : ACROSS_WIDE;
 
-  drawMeadow(el.canvas, world, {
-    w: size.w,
-    h: size.h,
-    art: ART,
-    tick: world.tick,
-    across,
-    maxAcross: across * ZOOM_CEILING,
-    camEase: CALM.matches ? 1 : 0.06,
-    follow: true,
-    alpha,
-    hover: hoverFromList ?? hover,
-    vignette: true,
-  });
+  if (onScreen) {
+    drawMeadow(el.canvas, world, {
+      w: size.w,
+      h: size.h,
+      art: ART,
+      tick: world.tick,
+      across,
+      maxAcross: across * ZOOM_CEILING,
+      camEase: CALM.matches ? 1 : 0.06,
+      follow: true,
+      alpha,
+      hover: hoverFromList ?? hover,
+      vignette: true,
+    });
 
-  el.canvas.style.cursor = hover ? 'pointer' : 'default';
+    el.canvas.style.cursor = hover ? 'pointer' : 'default';
+  }
 
   if (now - paletteStamp > 220) {
     paletteStamp = now;

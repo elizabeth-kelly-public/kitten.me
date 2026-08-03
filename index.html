@@ -4,14 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>kitten.me</title>
-<meta name="description" content="A meadow with four cats in it, running since tick zero.">
+<meta name="description" content="Currently obsessed with: AI cats at kitties.ai.">
 <meta name="color-scheme" content="light dark">
 <meta name="theme-color" content="#f6f1e6">
 
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://kitten.me/">
 <meta property="og:title" content="kitten.me">
-<meta property="og:description" content="A meadow with four cats in it, running since tick zero.">
+<meta property="og:description" content="Currently obsessed with: AI cats at kitties.ai.">
 <meta property="og:image" content="https://kitten.me/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
@@ -25,28 +25,48 @@
 </head>
 <body>
 
-<main class="plate">
+<main class="page">
 
-  <!-- the window: a world sitting on the paper, off-axis -->
-  <div class="window">
-    <canvas id="meadow" aria-hidden="true"></canvas>
-  </div>
+  <h1 class="lede">Obsessed with</h1>
 
-  <!-- the reading: the only large thing on the page is a number -->
-  <div class="reading">
-    <div class="tick" id="tick">618,033</div>
-    <p class="meta">
-      ticks · <span class="phase" id="phase">day</span>
-      <span class="source" id="source" data-state="local" title="simulated locally"><i></i></span>
-    </p>
+  <!-- Adding a project: copy one <li class="project"> block. The title line is
+       "<name> at <link>"; the body is a two-column plate — supporting text on
+       the left, the visual on the right — that collapses to one column on the
+       phone. A rule and the spacing appear automatically between siblings.
+       Only the cats carry a live canvas; another project can put anything in
+       .project-visual, including a plain <img>. -->
+  <ol class="projects">
 
-    <ul class="roster" id="roster">
-      <li><span class="name">Miso</span> <span class="act">naps in a sunbeam</span></li>
-      <li><span class="name">Biscuit</span> <span class="act">watches the grass</span></li>
-      <li><span class="name">Pumpkin</span> <span class="act">chases a bug</span></li>
-      <li><span class="name">Kittybear</span> <span class="act">naps in a sunbeam</span></li>
-    </ul>
-  </div>
+    <li class="project">
+      <h2 class="project-title">
+        <span class="project-name">AI cats</span>
+        <span class="project-prep">at</span>
+        <a href="https://kitties.ai">kitties.ai</a>
+      </h2>
+
+      <div class="project-body">
+        <div class="reading">
+          <div class="tick" id="tick">618,033</div>
+          <p class="meta">
+            ticks · <span class="phase" id="phase">day</span>
+            <span class="source" id="source" data-state="local" title="simulated locally"><i></i></span>
+          </p>
+
+          <ul class="roster" id="roster">
+            <li><span class="name">Miso</span> <span class="act">naps in a sunbeam</span></li>
+            <li><span class="name">Biscuit</span> <span class="act">watches the grass</span></li>
+            <li><span class="name">Pumpkin</span> <span class="act">chases a bug</span></li>
+            <li><span class="name">Kittybear</span> <span class="act">naps in a sunbeam</span></li>
+          </ul>
+        </div>
+
+        <div class="project-visual window">
+          <canvas id="meadow" aria-hidden="true"></canvas>
+        </div>
+      </div>
+    </li>
+
+  </ol>
 
 </main>
 
