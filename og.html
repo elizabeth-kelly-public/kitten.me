@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>kitten.me — OG card generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  body {
+    margin: 0; padding: 40px; background: #e8e5dd; color: #4a453c;
+    font: 13px/1.6 'IBM Plex Mono', ui-monospace, monospace;
+    display: flex; flex-direction: column; gap: 20px; align-items: flex-start;
+  }
+  canvas { width: 900px; max-width: 100%; height: auto; border-radius: 4px;
+           box-shadow: 0 24px 60px -28px rgba(40,32,18,.55), 0 0 0 1px rgba(40,32,18,.1); }
+  .row { display: flex; gap: 12px; align-items: center; }
+  button { font: inherit; padding: 8px 14px; border: 1px solid #2c2820; border-radius: 3px;
+           background: #2c2820; color: #f2eee4; cursor: pointer; }
+  button.ghost { background: transparent; color: #2c2820; }
+  p { max-width: 62ch; color: #7b7568; margin: 0; }
+</style>
+</head>
+<body>
+
+<p><strong>og.png — 1200 × 630.</strong> Frozen at golden hour, the one phase that is
+unmistakably a mood rather than a lighting state. Save the result as
+<code>og.png</code> next to <code>index.html</code>. Regenerate server-side once a
+day if you want it to age.</p>
+
+<canvas id="card" width="1200" height="630"></canvas>
+
+<div class="row">
+  <button id="save">Download og.png</button>
+  <button class="ghost" id="redraw">Redraw</button>
+</div>
+
+<script type="module">
+import { createPose, drawMeadow, fmtTick } from './meadow.js';
+
+const W = 1200, H = 630, TICK = 306, SCRIM = 182; // golden hour, clear of the crossfade
+const card = document.getElementById('card');
+const pose = createPose();
+
+function render() {
+  // meadow.js sizes the backing store from devicePixelRatio; force 1:1 so the
+  // exported PNG is exactly 1200 × 630 whatever screen it was generated on
+  const dpr = window.devicePixelRatio;
+  Object.defineProperty(window, 'devicePixelRatio', { value: 1, configurable: true });
+
+  delete card.__cam; delete card.__tile; delete card.__seen;
+  drawMeadow(card, pose, {
+    w: W, h: H,
+    art: 'soft',
+    tick: TICK,
+    across: 12,
+    camOffsetY: 0.8,
+    follow: false,
+    alpha: 0,
+    vignette: true,
+  });
+
+  Object.defineProperty(window, 'devicePixelRatio', { value: dpr, configurable: true });
+
+  const g = card.getContext('2d');
+  g.setTransform(1, 0, 0, 1, 0, 0);
+
+  // the scrim, then the address in the corner
+  const grad = g.createLinearGradient(0, H - SCRIM, 0, H);
+  grad.addColorStop(0, 'rgba(20,12,4,0)');
+  grad.addColorStop(1, 'rgba(20,12,4,.6)');
+  g.fillStyle = grad;
+  g.fillRect(0, H - SCRIM, W, SCRIM);
+
+  // tracked by hand so this matches the build-time generator exactly,
+  // whatever the browser does with ctx.letterSpacing
+  const width = (text, px) => {
+    let w = 0;
+    for (const ch of text) w += g.measureText(ch).width + px;
+    return w - px;
+  };
+  const tracked = (text, x, y, px) => {
+    let cx = x;
+    for (const ch of text) { g.fillText(ch, cx, y); cx += g.measureText(ch).width + px; }
+  };
+
+  g.textBaseline = 'alphabetic';
+  g.font = '400 20px "IBM Plex Mono", ui-monospace, monospace';
+  g.fillStyle = 'rgba(250,246,238,.95)';
+  tracked('kitten.me', 44, H - 44, 0.2);
+
+  g.font = '400 15px "IBM Plex Mono", ui-monospace, monospace';
+  g.fillStyle = 'rgba(250,246,238,.55)';
+  const right = `${fmtTick(618033)} ticks`;
+  tracked(right, W - 44 - width(right, 1.5), H - 44, 1.5);
+}
+
+await document.fonts.ready;
+render();
+
+document.getElementById('redraw').onclick = render;
+document.getElementById('save').onclick = () => {
+  card.toBlob((b) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(b);
+    a.download = 'og.png';
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }, 'image/png');
+};
+</script>
+</body>
+</html>
