@@ -37,7 +37,10 @@ body {
 .plate {
   flex: 1;
   display: grid;
-  grid-template-columns: minmax(190px, 15rem) minmax(0, 40rem);
+  /* 16rem, not 15: the widest roster line the world can produce is
+     "Kittybear chases something small" at 230px, and a wrapped row grows this
+     bottom-aligned block upward, which jumps the tick number by a line */
+  grid-template-columns: minmax(190px, 16rem) minmax(0, 40rem);
   align-items: end;
   align-content: center;
   justify-content: center;

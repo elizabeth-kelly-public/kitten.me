@@ -85,6 +85,16 @@ markings were arcs struck from a centre inside the body, so they bowed the
 wrong way and nested into each other — closer to a curl than a stripe. The
 direction of the stroke is the whole difference.
 
+**Roster lines must fit on one line.** The reading column is bottom-aligned
+against the window, so a wrapped row grows the block upward and jumps the tick
+number by a full line — very visible at 62px. The column is `16rem` (256px) and
+the widest line the world can produce is `Kittybear chases something small` at
+230px, leaving 26px of headroom. `sleeps in the tall grass` was shortened to
+`sleeps in the grass` for the same reason: it was the only one of 188 possible
+name/phrase combinations that overflowed, and at night every cat says it. If
+you add a phrase or the server sends a longer name, check it against that
+budget — 35 characters at 12px IBM Plex Mono, whose advance is 0.6em.
+
 One scale note, since it is easy to be caught out by: `og.png` draws a cat at
 134px, because the card is 1200px wide showing 12 tiles. The live window is
 640px showing the same 12 tiles, so cats land near 68px, and about 48px when

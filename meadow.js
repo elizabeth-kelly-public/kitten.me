@@ -187,7 +187,7 @@ function choose(w, k) {
   const others = w.kitties.filter(o => o.id !== k.id);
   if (r < (night ? 0.5 : 0.18)) {
     const b = nearestBeam(w, k);
-    k.act = night ? 'sleeps in the tall grass' : 'naps in a sunbeam';
+    k.act = night ? 'sleeps in the grass' : 'naps in a sunbeam';
     k.tx = b.x + 0.6 + w.rnd() * (b.w - 1.2);
     k.ty = b.y + 0.6 + w.rnd() * (b.h - 1.2);
     k.left = 24 + (w.rnd() * 22 | 0);
@@ -245,7 +245,7 @@ export function step(w) {
 
 /* ── live connection, local fallback ─────────────────────────────── */
 const STATE_PHRASE = {
-  sleeping: 'sleeps in the tall grass',
+  sleeping: 'sleeps in the grass',
   eating: 'eats',
   drinking: 'drinks',
   playing: 'plays',
@@ -262,7 +262,7 @@ function describe(r, tick, byId) {
   const other = (id) => (byId[id] ? byId[id].name : 'a friend');
   const st = a.state;
   if (st && st !== 'idle') {
-    if (st === 'sleeping') return a.in_sunbeam ? 'naps in a sunbeam' : 'sleeps in the tall grass';
+    if (st === 'sleeping') return a.in_sunbeam ? 'naps in a sunbeam' : 'sleeps in the grass';
     if (a.with_friend != null && (st === 'grooming' || st === 'cuddling' || st === 'playing')) {
       return (STATE_PHRASE[st] || st) + ' ' + other(a.with_friend);
     }
