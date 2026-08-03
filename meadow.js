@@ -517,6 +517,30 @@ function drawFireflies(g, pal, L, t, w, h) {
   }
 }
 
+/* A tail is still most of the time, and then it flicks. The first version ran a
+   continuous sine at fixed amplitude on one frequency for every cat — only the
+   phase differed — so four tails beat together like metronomes and none of them
+   ever rested. This is quiet, with an occasional burst on a tempo of its own.
+
+   lagMs is how far down the tail we are asking about: the base leads and the
+   tip answers a beat later, which is what makes the motion travel outward
+   instead of the whole curve pivoting at once. */
+function tailWave(t, bob, rest, lagMs) {
+  const tempo = 0.75 + ((bob * 37) % 1) * 0.5;
+  const period = (rest ? 5200 : 3400) * tempo;
+  const u = (((t - lagMs) / period + bob / 6.283) % 1 + 1) % 1;
+  const win = rest ? 0.13 : 0.2;   // the share of each cycle spent flicking
+  let burst = 0;
+  if (u < win) {
+    const q = u / win;
+    // out, a bigger swing back, then settle — and zero at both ends, so the
+    // flick begins and finishes at rest rather than snapping into place
+    burst = Math.sin(q * Math.PI) * Math.sin(q * Math.PI * 2.6);
+  }
+  // a slow drift underneath, so a tail at rest is quiet rather than dead
+  return burst + Math.sin((t - lagMs) / 2600 + bob) * 0.12;
+}
+
 /* Mackerel tabby markings: ribs off the spine, swept back toward the tail and
    tapering as they go. The direction is the whole point — struck from a centre
    inside the body the same strokes bow the other way and nest into each other,
@@ -575,13 +599,25 @@ function drawCat(g, k, L, pal, art, t, hovered) {
   g.lineWidth = art === 'ink' ? Math.max(1.7, s * 0.07) : Math.max(1, s * 0.03);
   g.lineJoin = 'round'; g.lineCap = 'round';
 
-  // tail
-  const tw = Math.sin(t / (rest ? 900 : 300) + k.bob) * s * (rest ? 0.18 : 0.4);
+  // tail — drawn before the body so it sits behind. The root rides the body
+  // rather than sitting at a fixed point, so it follows the loaf/stand shapes.
+  const rootX = -bodyR[0] * 0.86, rootY = bodyR[1] * 0.32;
+  const swing = s * (rest ? 0.18 : 0.38);
+  const lag = rest ? 150 : 95;
+  const wBase = tailWave(t, k.bob, rest, 0);
+  const wMid = tailWave(t, k.bob, rest, lag * 0.45);
+  const wTip = tailWave(t, k.bob, rest, lag);
   g.strokeStyle = art === 'ink' ? rgb(pal.ink) : rgb(coat);
   g.lineWidth = art === 'ink' ? Math.max(1.4, s * 0.055) : art === 'flat' ? s * 0.2 : s * 0.16;
   g.beginPath();
-  g.moveTo(-s * 0.4, s * 0.1);
-  g.quadraticCurveTo(-s * 0.78, s * 0.05 + tw * 0.4, -s * 0.7 + tw * 0.3, -s * 0.28 + tw);
+  g.moveTo(rootX, rootY);
+  // a cubic, not a quadratic: two control points is the least it takes to hold
+  // two different phases at once, which is what a travelling wave needs
+  g.bezierCurveTo(
+    rootX - s * 0.253 + wBase * swing * 0.09, rootY - s * 0.033 + wBase * swing * 0.28,
+    rootX - s * 0.353 + wMid * swing * 0.20, rootY - s * 0.160 + wMid * swing * 0.66,
+    rootX - s * 0.300 + wTip * swing * 0.30, rootY - s * 0.380 + wTip * swing * 1.0,
+  );
   g.stroke();
   if (art !== 'flat' && art !== 'ink') {
     g.strokeStyle = rgb(outline, 0.5); g.lineWidth = s * 0.03; g.stroke();

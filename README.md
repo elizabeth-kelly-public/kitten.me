@@ -74,6 +74,16 @@ constant. Biasing the window shorter to finish early is also worse, not
 better: the cats stop and restart, and stop-start reads as choppier than a
 slight overshoot.
 
+**The tail flicks; it does not wag.** The first version ran a continuous sine at
+fixed amplitude on one frequency for every cat, varying only the phase, so four
+tails beat together and none of them ever rested — in motion 81% of the time.
+It now bursts: quiet for most of a cycle, then one flick, on a tempo that
+differs per cat. Measured share of time in motion is 11% active, 7% resting.
+The curve is a cubic rather than a quadratic because two control points are the
+least it takes to hold two phases at once, which is what lets the motion travel
+from the base out to the tip instead of the whole tail pivoting at once. The
+root rides the body radii, so it follows the loaf and standing shapes.
+
 **The camera used to cut.** It had a rule that snapped instantly when the
 target moved more than 7 tiles. That was survivable when the target was the
 midpoint of the group, but once the zoom ceiling made it follow whichever cat
