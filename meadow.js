@@ -725,24 +725,43 @@ export function drawMeadow(canvas, world, opts) {
         let sx = 0, sy = 0;
         for (const k of world.kitties) { sx += lerp(k.px, k.x, alpha); sy += lerp(k.py, k.y, alpha); }
         const mx = sx / world.kitties.length, my = sy / world.kitties.length;
-        let bd = Infinity;
+        let best = null, bd = Infinity, held = null, hd = Infinity;
         for (const k of world.kitties) {
           const kx = lerp(k.px, k.x, alpha), ky = lerp(k.py, k.y, alpha);
           const d = (kx - mx) ** 2 + (ky - my) ** 2;
-          if (d < bd) { bd = d; cx = kx; cy = ky; }
+          if (d < bd) { bd = d; best = { id: k.id, x: kx, y: ky }; }
+          if (k.id === canvas.__anchor) { hd = d; held = { id: k.id, x: kx, y: ky }; }
         }
+        // Stay with whoever we are already watching until someone else is
+        // clearly more central — 2.25 is 1.5x in distance, these are squared.
+        // Re-picking every frame made the camera flick between cats standing
+        // at opposite ends of the meadow.
+        const pick = held && hd < bd * 2.25 ? held : best;
+        if (pick) { canvas.__anchor = pick.id; cx = pick.x; cy = pick.y; }
       }
     }
   }
   cy += opts.camOffsetY || 0;
+
+  // The easing rates below were written as "fraction per frame" at 60Hz, which
+  // means a 120Hz display eases twice as fast and a stuttering one lurches.
+  // Rescale them by the real frame time so the motion is the same everywhere.
+  const now = performance.now();
+  const dt = canvas.__t ? Math.min(120, now - canvas.__t) : 1000 / 60;
+  canvas.__t = now;
+  const perFrame = (rate) => 1 - Math.pow(1 - rate, dt / (1000 / 60));
+
   const targetTile = w / need;
   const prevTile = canvas.__tile;
-  const tile = prevTile === undefined ? targetTile : prevTile + (targetTile - prevTile) * 0.05;
+  const tile = prevTile === undefined ? targetTile : prevTile + (targetTile - prevTile) * perFrame(0.05);
   canvas.__tile = tile;
 
   const cam = canvas.__cam || (canvas.__cam = { x: cx, y: cy });
-  const far = Math.hypot(cx - cam.x, cy - cam.y) > 7;
-  const ease = (!canvas.__seen || far) ? 1 : (opts.camEase || 0.06);
+  // Only the first frame cuts. There used to be a "if the target moved more
+  // than 7 tiles, snap" rule, and once the camera started following whichever
+  // cat was most central it fired several times a minute — the camera visibly
+  // cutting between cats. However far the target jumps, ease to it instead.
+  const ease = canvas.__seen ? perFrame(opts.camEase || 0.06) : 1;
   canvas.__seen = true;
   cam.x += (cx - cam.x) * ease; cam.y += (cy - cam.y) * ease;
 
@@ -750,7 +769,7 @@ export function drawMeadow(canvas, world, opts) {
   canvas.__layout = L;
   canvas.__pal = pal;
 
-  const t = performance.now();
+  const t = now;
   drawGround(g, pal, L, w, h);
   drawBeams(g, world, pal, L, tick + alpha);
   drawBowls(g, world, pal, L);

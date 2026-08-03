@@ -64,6 +64,25 @@ rather than the midpoint of the bounding box — which, when the group is
 scattered, is the one place nobody is standing. A wanderer now sometimes sits
 outside the window; the roster still accounts for everyone.
 
+**The server does not tick at `TICK_MS`.** It runs nearer 800ms and jitters
+between roughly 730 and 840. `TICK_MS` is 1000, so interpolating over it meant
+a cat travelled only 80% of the way to its next position before the frame
+landed and it snapped the rest — a stutter on every cat, more than once a
+second, on 40 of 41 sampled frames. `site.js` now measures the gap between
+server frames and follows that instead. Do not "simplify" it back to a
+constant. Biasing the window shorter to finish early is also worse, not
+better: the cats stop and restart, and stop-start reads as choppier than a
+slight overshoot.
+
+**The camera used to cut.** It had a rule that snapped instantly when the
+target moved more than 7 tiles. That was survivable when the target was the
+midpoint of the group, but once the zoom ceiling made it follow whichever cat
+was most central, the target began jumping between cats and the rule fired
+several times a minute as a hard cut. The snap is now first-frame only, the
+anchor cat is sticky until another is 1.5x more central, and the easing rates
+are rescaled by real frame time so a 120Hz display does not ease twice as fast
+as a 60Hz one.
+
 **The mat is paper, not white.** The `inset ... rgba(255,255,255,.5)` ring in
 the doc sat behind the canvas and never rendered. Drawn properly it ringed the
 night window in a bright frame, so it is now a translucent tint of the current

@@ -44,6 +44,8 @@ let hoverFromList = null; // set by pointing at a roster row
 let size = { w: 0, h: 0 };
 let paletteStamp = 0;
 let running = null;       // { kind: 'raf' | 'timer', id } — never guess which
+let lastStamp = 0;        // when the last server frame landed
+let period = TICK_MS;     // and how far apart they have been arriving
 
 /* ── canvas sizing ───────────────────────────────────────────────── */
 
@@ -104,8 +106,21 @@ const disconnect = connect(world, WS_URL, (src) => {
 
 function draw(now) {
   if (world.source === 'live') {
-    // the server ticks once a second; interpolate between the last two frames
-    alpha = clamp01((now - world.stamp) / TICK_MS);
+    // The server does not tick at TICK_MS — it runs nearer 800ms, and jitters.
+    // Interpolating over a fixed 1000ms meant a cat only ever travelled 80% of
+    // the way before the next frame landed and it snapped the rest, which is a
+    // visible stutter on every cat, more than once a second. Measure the real
+    // cadence instead and follow it.
+    if (world.stamp !== lastStamp) {
+      const gap = world.stamp - lastStamp;
+      // ignore catch-up bursts and reconnect gaps; ease toward the rest
+      if (lastStamp && gap > 250 && gap < 4000) period += (gap - period) * 0.25;
+      lastStamp = world.stamp;
+    }
+    // Tracking the measured cadence directly beats trying to arrive early:
+    // finishing the move ahead of the next frame makes the cats stop and
+    // restart, and stop-start motion reads as choppier than a slight overshoot.
+    alpha = clamp01((now - world.stamp) / period);
   } else {
     while (now - last >= TICK_MS) { step(world); last += TICK_MS; }
     if (now - last > TICK_MS * 4) last = now;
