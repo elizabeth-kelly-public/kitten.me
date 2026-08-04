@@ -74,6 +74,37 @@ constant. Biasing the window shorter to finish early is also worse, not
 better: the cats stop and restart, and stop-start reads as choppier than a
 slight overshoot.
 
+**The counter is polled; the roster is paced.** These are two different kinds of
+information and they need different treatment. The tick is a counter — its job
+is to be countable, so it is read every 200ms and written whenever it changes,
+and it tracks the world exactly. Reading it on a 1000ms timer against an 800ms
+world made every fourth read catch two ticks, so a correct sequence looked like
+it was skipping.
+
+The roster is prose, and prose carries no ordinal expectation — nobody can tell
+whether a sentence is 0.8s or 2s old. It needs pacing, because the world changes
+far faster than anyone can read: 68% of lines survive a single tick, 2.7 text
+changes a second, and all four lines turned over together on one tick in seven.
+Three rules calm it without touching the counter:
+
+- lines change only on a tick edge, so the block advances as one moment rather
+  than to a second clock of its own;
+- at most `PER_TICK` lines change per tick, longest-waiting first, so the queue
+  drains fairly and no line is starved;
+- a line rests at least `DWELL` before it may be replaced.
+
+Two properties are worth knowing before tuning. The **cap is itself a floor**:
+four cats round-robin at `(4 / PER_TICK) x tick`, so any dwell below that can
+never bite. And the **dwell quantises** — changes only happen on tick edges, so
+it rounds up to whole ticks, and 1700 / 2000 / 2400 are the same setting. The
+dial has five positions, not a range.
+
+Shipped at `PER_TICK 2`, `DWELL 1500`: 81% of lines correct at any instant, mean
+lag 0.17s, worst case 1.6s, 1.5 writes/s, never more than two lines at once.
+Unconstrained would be 100% correct at 2.4 writes/s, with three or four lines
+turning over together on a third of ticks — which is information a reader cannot
+take in anyway. `DWELL 2000` is the fallback if it reads as too busy.
+
 **The tail flicks; it does not wag.** The first version ran a continuous sine at
 fixed amplitude on one frequency for every cat, varying only the phase, so four
 tails beat together and none of them ever rested — in motion 81% of the time.

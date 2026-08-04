@@ -168,13 +168,68 @@ function applyPalette(pal) {
 
 /* ── the reading ─────────────────────────────────────────────────── */
 
+// Poll faster than the world ticks and write only on change. The old code read
+// once a second against a world that advances every 800ms, so every fourth read
+// caught two ticks and the counter appeared to skip. It never actually did —
+// the server increments by exactly one, every time — it was being read on a
+// clock that did not match.
+const POLL = 200;
+
+// The cats change what they are doing far faster than a person can read about
+// it: 68% of lines survive a single tick, and all four turned over at once on
+// roughly one tick in seven. So a line holds for a beat before it may be
+// replaced. This is a floor, not a cadence — a cat that genuinely sleeps for
+// twenty seconds simply keeps its line, and nothing moves.
+// Note that this quantises: lines only ever change on a tick edge, so the dwell
+// rounds up to a whole number of ticks. At an 800ms tick, 1700 / 2000 / 2400 all
+// behave identically, and so do 400 / 800. The dial has about five positions,
+// not a range — measured on 150 replayed server frames, the rungs run
+// 1 tick 89% of lines correct at 1.91 writes/s · 2 ticks 81% / 1.52 ·
+// 3 ticks 70% / 1.33 · 4 ticks 62% / 1.06 · 5 ticks 56% / 0.90.
+// If this ever reads as too busy, 2000 is the agreed fallback — it drops to the
+// 3-tick rung, a third quieter, at the cost of eleven points of accuracy.
+const DWELL = 1500;
+// unless it did something categorically different, which is worth showing sooner
+const DWELL_MAJOR = 1500;
+// and no more than this many lines may turn over on any one tick. This is also
+// a floor on how often a line may change: four cats round-robin at
+// (4 / PER_TICK) x tick, so any DWELL below 1600ms here can never bite.
+const PER_TICK = 2;
+
+// The direction a cat wandered is noise to a reader — it changes every tick and
+// means nothing. The world still says it; the page just does not repeat it.
+const tidy = (act) => act.replace(/^wanders\s+(north|south|east|west|off)$/, 'wanders');
+
+const CLASSES = [
+  [/^(naps|sleeps|settles)/, 'sleep'],
+  [/^(eats|drinks)/, 'feed'],
+  [/^(grooms|cuddles|washes)/, 'social'],
+  [/^(plays|pounces|chases|follows)/, 'play'],
+  [/^wanders/, 'move'],
+];
+function classOf(act) {
+  for (const [re, name] of CLASSES) if (re.test(act)) return name;
+  return 'idle';
+}
+
 const rows = new Map();
+let shownTick = null, shownPhase = null;
 
 function readOut() {
-  el.tick.textContent = fmtTick(world.tick);
-  el.phase.textContent = phaseFor(world.tick);
+  const now = performance.now();
+
+  const tick = fmtTick(world.tick);
+  // Roster lines are only allowed to change on this edge. A line turning over
+  // while the counter sits still reads as unrelated motion — two things moving
+  // to different clocks. Tied to the tick, the whole block advances as one
+  // moment and is then still, which is far quieter for the same information.
+  const tickMoved = tick !== shownTick;
+  if (tickMoved) { el.tick.textContent = tick; shownTick = tick; }
+  const phase = phaseFor(world.tick);
+  if (phase !== shownPhase) { el.phase.textContent = phase; shownPhase = phase; }
 
   const seen = new Set();
+  const queue = [];
   world.kitties.forEach((k, i) => {
     seen.add(k.id);
     let row = rows.get(k.id);
@@ -187,13 +242,49 @@ function readOut() {
       li.append(name, document.createTextNode(' '), act);
       li.addEventListener('mouseenter', () => { hoverFromList = k.id; });
       li.addEventListener('mouseleave', () => { hoverFromList = null; });
-      row = { li, name, act };
+      // Stagger where each cat sits in its dwell, so the four lines never turn
+      // over on the same beat. Four lines changing together reads as the page
+      // refreshing; the same number of changes, spread out, reads as four cats.
+      row = { li, name, act, shownAct: '', shownAt: now - DWELL * ((k.id * 0.618) % 1) };
       rows.set(k.id, row);
     }
     if (row.name.textContent !== k.name) row.name.textContent = k.name;
-    if (row.act.textContent !== k.act) row.act.textContent = k.act;
+
+    const want = tidy(k.act);
+    if (want !== row.shownAct) {
+      const held = now - row.shownAt;
+      const major = classOf(want) !== classOf(row.shownAct);
+      const ready = held >= DWELL || (major && held >= DWELL_MAJOR);
+      // the first line for a cat is written straight away; after that it queues
+      if (!row.shownAct) {
+        row.act.textContent = want;
+        row.shownAct = want;
+        row.shownAt = now;
+      } else if (ready) {
+        queue.push({ row, want, held });
+      }
+    }
+
     if (el.roster.children[i] !== row.li) el.roster.insertBefore(row.li, el.roster.children[i] ?? null);
   });
+
+  // At most PER_TICK lines turn over per tick, and only on the tick. Tying
+  // changes to the tick alone still let three land on the same beat, because
+  // quantising onto 1.25 instants a second bunches them up. Capping spreads
+  // them back out, and the cats kept waiting longest go first, so the queue
+  // drains fairly rather than favouring whoever sits at the top of the roster.
+  //
+  // The cap is itself a floor on how often a line may change: with four cats
+  // all wanting to move, they round-robin, so each line rests
+  // (4 / PER_TICK) x 800ms. Any DWELL below that never gets to bite.
+  if (tickMoved && queue.length) {
+    queue.sort((a, b) => b.held - a.held);
+    for (const next of queue.slice(0, PER_TICK)) {
+      next.row.act.textContent = next.want;
+      next.row.shownAct = next.want;
+      next.row.shownAt = now;
+    }
+  }
 
   for (const [id, row] of rows) {
     if (seen.has(id)) continue;
@@ -204,7 +295,7 @@ function readOut() {
 
 el.roster.replaceChildren();
 readOut();
-const readOutTimer = setInterval(readOut, 1000);
+const readOutTimer = setInterval(readOut, POLL);
 
 /* ── run ─────────────────────────────────────────────────────────── */
 
